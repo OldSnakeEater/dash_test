@@ -1,5 +1,6 @@
 from dash import Dash, html, dcc, Input, Output, State, callback, page_container, page_registry, no_update
 import dash_bootstrap_components as dbc
+import jwt
 
 app = Dash(__name__, use_pages=True, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 #todo как обащаться к отдельны м элементам
@@ -82,7 +83,7 @@ app.layout = [
             children=get_auth_form(),
             id="main"
         ),
-        dcc.Store(id="client_store", storage_type="session"),
+        dcc.Store(id="client_store", storage_type="local"),
 ]
 
 @callback(
@@ -93,33 +94,41 @@ app.layout = [
     Output("password_input", "className"),
     Output("passwordFormText", "children"),
     Output("passwordFormText", "className"),
+    Output("client_store", "data"),
     Input("auth_button", "n_clicks"),
     State("login_input", "value"),
     State("password_input", "value"),
+    State("client_store", "data"),
     # config_prevent_initial_callbacks=True
-    prevent_initial_call=True
+    # prevent_initial_call=True
 )
-def credentials(n_clicks, log, pas):
+def credentials(n_clicks, log, pas, store):
     print(log, pas)
     # input вернет None если не будет ввода
-    if log and pas:
-        # делать функцию читающую логин и пароли из бд
-        if log == "admin" and pas == "admin":
-            return get_main_form(), no_update, no_update, no_update, no_update, no_update, no_update
-        elif log != "admin" and pas == "admin":
-            return (no_update, "is-invalid", "Пользователь с таким логином не найден!", "text-danger",
-                no_update, no_update, no_update)
-        elif log == "admin" and pas != "admin":
-            return (no_update, no_update, no_update, no_update,
-                    "is-invalid", "Неверный пароль!", "text-danger")
-    elif not log and pas:
-        return (no_update, "is-invalid", "Необходимо ввести логин!", "text-danger",
-                no_update, no_update, no_update)
-    elif log and not pas:
-        return (no_update, no_update, no_update, no_update,
-                "is-invalid", "Необходимо ввести пароль!", "text-danger")
+    if store:
+        token = jwt.decode(store, key="secret", algorithms="HS256")
+        print(token)
+        return get_main_form(), no_update, no_update, no_update, no_update, no_update, no_update, no_update
     else:
-        return no_update
+        if log and pas:
+            # делать функцию читающую логин и пароли из бд
+            if log == "admin" and pas == "admin":
+                token = jwt.encode({'log': log}, key="secret", algorithm="HS256")
+                return get_main_form(), no_update, no_update, no_update, no_update, no_update, no_update, token
+            elif log != "admin" and pas == "admin":
+                return (no_update, "is-invalid", "Пользователь с таким логином не найден!", "text-danger",
+                    no_update, no_update, no_update, no_update)
+            elif log == "admin" and pas != "admin":
+                return (no_update, no_update, no_update, no_update,
+                        "is-invalid", "Неверный пароль!", "text-danger", no_update)
+        elif not log and pas:
+            return (no_update, "is-invalid", "Необходимо ввести логин!", "text-danger",
+                    no_update, no_update, no_update, no_update)
+        elif log and not pas:
+            return (no_update, no_update, no_update, no_update,
+                    "is-invalid", "Необходимо ввести пароль!", "text-danger", no_update)
+        else:
+            return no_update
 
 
 if __name__ == "__main__":
