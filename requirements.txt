@@ -1,0 +1,6 @@
+dash
+pymongo
+sqlalchemy
+python-dotenv
+pyjwt
+dash_bootstrap_components
