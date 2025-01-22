@@ -17,8 +17,13 @@ def get_auth_form():
     password_input = html.Div(
         [
             dbc.Label("Пароль", html_for="password_input"),
-            dbc.Input(type="text", id="password_input", placeholder="Введите пароль"),
-            dbc.FormText("", id="passwordFormText", color="secondary")
+            dbc.Input(type="password", id="password_input", placeholder="Введите пароль"),
+            dbc.FormText("", id="passwordFormText", color="secondary"),
+            dcc.Checklist(
+                id='show-password-checkbox',
+                options=[{'label': 'Показать пароль', 'value': 'show'}],
+                style={'display': 'inline-block', 'marginTop': '10px'}
+            )
         ],
         className="mb-3"
     )
@@ -86,21 +91,19 @@ app.layout = [
         dcc.Store(id="client_store", storage_type="local"),
 ]
 
-@callback(
-    Output("main", "children"),
-    Output("login_input", "className"),
-    Output("loginFormText", "children"),
-    Output("loginFormText", "className"),
-    Output("password_input", "className"),
-    Output("passwordFormText", "children"),
-    Output("passwordFormText", "className"),
-    Output("client_store", "data"),
-    Input("auth_button", "n_clicks"),
-    State("login_input", "value"),
-    State("password_input", "value"),
-    State("client_store", "data"),
-    # config_prevent_initial_callbacks=True
-    # prevent_initial_call=True
+"""@callback(
+    # Output("main", "children"),
+    # Output("login_input", "className"),
+    # Output("loginFormText", "children"),
+    # Output("loginFormText", "className"),
+    # Output("password_input", "className"),
+    # Output("passwordFormText", "children"),
+    # Output("passwordFormText", "className"),
+    # Output("client_store", "data"),
+    # Input("auth_button", "n_clicks"),
+    # State("login_input", "value"),
+    # State("password_input", "value"),
+    # State("client_store", "data"),
 )
 def credentials(n_clicks, log, pas, store):
     print(log, pas)
@@ -128,8 +131,17 @@ def credentials(n_clicks, log, pas, store):
             return (no_update, no_update, no_update, no_update,
                     "is-invalid", "Необходимо ввести пароль!", "text-danger", no_update)
         else:
-            return no_update
+            return no_update"""
 
+@callback(
+    Output("password_input", "type"),
+    Input("show-password-checkbox", "value")
+)
+def turn_password_checkbox(value):
+    if value and "show" in value:
+        return "text"
+    else:
+        return "password"
 
 if __name__ == "__main__":
     app.run(debug=True)
