@@ -1,8 +1,32 @@
 from dash import Dash, html, dcc, Input, Output, State, callback, page_container, page_registry, no_update
+from flask_caching import Cache
+
 import dash_bootstrap_components as dbc
 import jwt
+import time
+import os
 
 app = Dash(__name__, use_pages=True, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+CACHE_CONFIG = {
+    'CACHE_TYPE': 'FileSystemCache',
+    "CACHE_DIR": './Cache'
+}
+
+cache = Cache()
+cache.init_app(app.server, config=CACHE_CONFIG)
+
+@cache.memoize(timeout=86400)
+def global_store():
+    #получаем отделы из бд
+    for filename in os.listdir('./Cache'):
+        file_path = os.path.join('./Cache', filename)
+        if os.path.isfile(file_path):  # Проверяем, что это файл, а не папка
+            os.remove(file_path)
+    departments = "zero_department"
+    time.sleep(5)
+    return departments
+
 #todo как обащаться к отдельны м элементам
 def get_auth_form():
     login_input = html.Div(
@@ -91,23 +115,25 @@ app.layout = [
         dcc.Store(id="client_store", storage_type="local"),
 ]
 
-"""@callback(
-    # Output("main", "children"),
-    # Output("login_input", "className"),
-    # Output("loginFormText", "children"),
-    # Output("loginFormText", "className"),
-    # Output("password_input", "className"),
-    # Output("passwordFormText", "children"),
-    # Output("passwordFormText", "className"),
-    # Output("client_store", "data"),
-    # Input("auth_button", "n_clicks"),
-    # State("login_input", "value"),
-    # State("password_input", "value"),
-    # State("client_store", "data"),
+@callback(
+    Output("main", "children"),
+    Output("login_input", "className"),
+    Output("loginFormText", "children"),
+    Output("loginFormText", "className"),
+    Output("password_input", "className"),
+    Output("passwordFormText", "children"),
+    Output("passwordFormText", "className"),
+    Output("client_store", "data"),
+    Input("auth_button", "n_clicks"),
+    State("login_input", "value"),
+    State("password_input", "value"),
+    State("client_store", "data"),
 )
 def credentials(n_clicks, log, pas, store):
+    departments = global_store()
     print(log, pas)
     # input вернет None если не будет ввода
+    # res = request.cookies.get("session_token")
     if store:
         token = jwt.decode(store, key="secret", algorithms="HS256")
         print(token)
@@ -131,7 +157,7 @@ def credentials(n_clicks, log, pas, store):
             return (no_update, no_update, no_update, no_update,
                     "is-invalid", "Необходимо ввести пароль!", "text-danger", no_update)
         else:
-            return no_update"""
+            return no_update
 
 @callback(
     Output("password_input", "type"),
@@ -144,4 +170,5 @@ def turn_password_checkbox(value):
         return "password"
 
 if __name__ == "__main__":
+    global_store()
     app.run(debug=True)
