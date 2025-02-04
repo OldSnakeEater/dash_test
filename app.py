@@ -4,7 +4,7 @@ from flask_caching import Cache
 import dash_bootstrap_components as dbc
 import jwt
 import time
-import os
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Dash(__name__, use_pages=True, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -16,16 +16,23 @@ CACHE_CONFIG = {
 cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
 
-@cache.memoize(timeout=86400)
-def global_store():
-    #получаем отделы из бд
-    for filename in os.listdir('./Cache'):
-        file_path = os.path.join('./Cache', filename)
-        if os.path.isfile(file_path):  # Проверяем, что это файл, а не папка
-            os.remove(file_path)
+def get_departments_cache():
     departments = "zero_department"
     time.sleep(5)
-    return departments
+    cache.set("latest_cache", departments)
+
+def update_cache():
+    old_data = cache.get("latest_cache")
+    if old_data:
+        cache.set("backup_data", old_data)
+        cache.set("latest_data", get_departments_cache())
+    else:
+        get_departments_cache()
+
+scheduler = BackgroundScheduler()
+job = scheduler.add_job(update_cache, 'interval', minutes=30)
+scheduler.start()
+
 
 #todo как обащаться к отдельны м элементам
 def get_auth_form():
@@ -130,7 +137,13 @@ app.layout = [
     State("client_store", "data"),
 )
 def credentials(n_clicks, log, pas, store):
-    departments = global_store()
+    try:
+        departments = cache.get("latest_cache")
+        if departments is None:
+            raise ValueError
+    except ValueError:
+        departments = cache.get("backup_cache")
+    print(departments)
     print(log, pas)
     # input вернет None если не будет ввода
     # res = request.cookies.get("session_token")
@@ -170,5 +183,5 @@ def turn_password_checkbox(value):
         return "password"
 
 if __name__ == "__main__":
-    global_store()
-    app.run(debug=True)
+    get_departments_cache()
+    app.run(debug=False)
